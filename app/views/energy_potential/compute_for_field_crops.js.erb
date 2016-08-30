@@ -1,0 +1,36 @@
+<% if @error %>
+	$("#errorNotice").show();
+<% else %>
+	$("#errorNotice").hide();
+	$("#resultTable").show();
+	
+	$("#resultMJ").html('<%=j number_to_currency(@eprMJ, :unit => "") %>');
+	$("#resultTJ").html('<%=j number_to_currency(@eprTJ, :unit => "") %>');
+	$("#resultPJ").html('<%=j number_to_currency(@eprPJ, :unit => "") %>');
+
+	$("#resultHeatMJ").html('<%=j number_to_currency(@eprHeatMJ, :unit => "") %>');
+	$("#resultHeatTJ").html('<%=j number_to_currency(@eprHeatTJ, :unit => "") %>');
+	$("#resultHeatPJ").html('<%=j number_to_currency(@eprHeatPJ, :unit => "") %>');
+
+	$("#resultElectricityKWh").html('<%=j number_to_currency(@eprElectricityKWh, :unit => "") %>');
+	$("#resultElectricityMWh").html('<%=j number_to_currency(@eprElectricityMWh, :unit => "") %>');
+	$("#resultElectricityGWh").html('<%=j number_to_currency(@eprElectricityGWh, :unit => "") %>');
+	
+	$("#resultCHPMJ").html('<%=j number_to_currency(@eprCHPMJ, :unit => "") %>');
+	$("#resultCHPTJ").html('<%=j number_to_currency(@eprCHPTJ, :unit => "") %>');
+	$("#resultCHPPJ").html('<%=j number_to_currency(@eprCHPPJ, :unit => "") %>');
+
+	$("#resultCHPkWh").html('<%=j number_to_currency(@eprCHPkWh, :unit => "") %>');
+	$("#resultCHPMWh").html('<%=j number_to_currency(@eprCHPMWh, :unit => "") %>');
+	$("#resultCHPGWh").html('<%=j number_to_currency(@eprCHPGWh, :unit => "") %>');
+
+	$("#noHouseholdElectricity").html('<%=j "%.2f" % (@eprElectricityKWh/3544.0) %>');
+	$("#noHouseholdCHP").html('<%=j "%.2f" % (@eprCHPkWh/3544.0) %>');
+	
+	$("#priceElectricity1").html('<%=j number_to_currency(@eprElectricityKWh*0.38, :unit => "") %>');
+	$("#priceCHP1").html('<%=j number_to_currency(@eprCHPkWh*0.38, :unit => "") %>');
+
+	$("#priceElectricity2").html('<%=j number_to_currency(@eprElectricityKWh*0.79, :unit => "") %>');
+	$("#priceCHP2").html('<%=j number_to_currency(@eprCHPkWh*0.79, :unit => "") %>');
+	
+<% end %>

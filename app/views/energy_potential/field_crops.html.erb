@@ -1,0 +1,431 @@
+<ul class="nav nav-tabs" style="margin-bottom: 30px;">
+  <li role="presentation" class="<%= 'active' if controller_name == 'energy_potential' && action_name == 'field_crops' %>"><%= link_to 'Ratarska biomasa'.html_safe, energy_potential_field_crops_path %></li>
+  <li role="presentation" class="<%= 'active' if controller_name == 'energy_potential' && action_name == 'pruning_residues' %>"><%= link_to 'Orezana biomasa'.html_safe, energy_potential_pruning_residues_path %></li>
+</ul>
+
+<div class="row">
+	<div class="col-lg-6">
+
+		<%= form_tag energy_potential_compute_for_field_crops_path, {:remote => true, :class => 'form-horizontal'} do %>
+
+			<div class="form-group">
+				<label for="unos" class="col-sm-6 control-label text-primary">Način unosa prinosa</label>
+				<div class="col-sm-6">
+					<div class="btn-group btn-group-justified" data-toggle="buttons">
+					  <label class="btn btn-default active" id="option1label" onclick="option1clicked()">
+					    <input type="radio" name="option1" id="option1" autocomplete="off" checked> Tone po hektaru
+					  </label>
+					  <label class="btn btn-default" id="option2label" onclick="option2clicked()">
+					    <input type="radio" name="option2" id="option2" autocomplete="off"> Tone
+					  </label>
+					</div>
+				</div>
+			</div>
+
+			<div class="form-group">
+			  <label for="prinos" class="col-sm-6 control-label text-primary" id="labelPrinos">Prinos <span class="text-muted">[t/ha]</span></label>
+			  <div class="col-sm-6">
+			    <%= text_field_tag 'prinos', "", :class => "form-control allownumericwithdecimal", :id => "prinos" %>
+			  </div>
+			</div>
+
+			<div class="form-group" id="surface">
+			  <label for="prh" class="col-sm-6 control-label text-primary">Ukupna obradiva površina <span class="text-muted">[ha]</span></label>
+			  <div class="col-sm-6">
+			    <%= text_field_tag 'prh', "", :class => "form-control allownumericwithdecimal", :id => "prh" %>
+			  </div>
+			</div>
+
+			<hr/>
+
+			<div class="form-group">
+			  <label for="kultura" class="col-sm-6 control-label text-primary">Ratarska kultura</label>
+			  <div class="col-sm-6">
+			    <%= select_tag 'kultura', options_for_select([["Vlastita kultura", "vlastita"],
+			    																							["Pšenica", "psenica"],
+			    																							["Kukuruz", "kukuruz"],
+			    																							["Ječam", "jecam"],
+			    																							["Soja", "soja"],
+			    																							["Suncokret", "suncokret"],
+			    																							["Uljana repica", "uljana_repica"]], "vlastita"), 
+			    																							{:class => "form-control",
+			    																							 :onchange => "cropChanged(this.value)",
+			    																							 :id => "kultura"} %>
+			  </div>
+			</div>			
+
+			<div class="form-group">
+			  <label for="omjer_brojnik" class="col-sm-6 control-label text-primary">Žetveni omjer <span class="text-muted">[prinos : žetveni ostatak]</span></label>
+			  <div class="col-sm-6">
+				  <div class="row">
+					  <div class="col-sm-5">
+					    <%= text_field_tag 'omjer_brojnik', "", :class => "form-control allownumericwithdecimal", :id => "omjer_brojnik"  %>
+					  </div>
+					  <div class="col-sm-2 text-center">
+							<h5>:</h5>
+					  </div>
+					  <div class="col-sm-5">
+					    <%= text_field_tag 'omjer_nazivnik', "", :class => "form-control allownumericwithdecimal", :id => "omjer_nazivnik"  %>
+					  </div>
+				  </div>
+			  </div>
+			</div>
+
+			<div class="form-group">
+			  <label for="dov" class="col-sm-6 control-label text-primary">Donja ogrjevna vrijednost <span class="text-muted">[MJ/t]</span></label>
+			  <div class="col-sm-6">
+			    <%= text_field_tag 'dov', "", :class => "form-control allownumericwithdecimal", :id => "dov" %>
+			  </div>
+			</div>
+
+			<hr/>
+
+			<div class="form-group">
+			  <label for="udio_tlo" class="col-sm-6 control-label text-primary">Udio biomase koji se vraća u tlo <span class="text-muted">[%]</span></label>
+			  <div class="col-sm-6">
+			    <%= text_field_tag 'udio_tlo', "", :class => "form-control allownumericwithdecimal", :id => "udio_tlo" %>
+			  </div>
+			</div>
+
+			<hr/>
+
+		  <div class="form-group">
+		    <div class="col-sm-6">
+		      <button type="button" class="btn btn-default col-sm-12" onclick="erase()"><i class="fa fa-eraser"></i> Očisti</button>
+		    </div>
+		    <div class="col-sm-6">
+		      <button type="submit" class="btn btn-primary col-sm-12"><i class="fa fa-cogs"></i> Izračunaj</button>
+		    </div>
+		  </div>
+
+		<% end %>		
+
+	</div>
+
+	<div class="col-lg-6">
+		<div class="alert alert-danger" id="errorNotice" hidden>
+		  <strong>Pogreška!</strong> Sva polja su obavezna.
+		</div>
+
+		<div class="panel with-nav-tabs panel-primary" id="resultTable" hidden>
+      <div class="panel-heading">
+        <ul class="nav nav-tabs">
+          <li class="active"><a href="#total" data-toggle="tab"><i class="fa fa-leaf"></i> Ukupni energetski potencijal</a></li>
+          <li class="dropdown">
+            <a href="#" data-toggle="dropdown"><i class="fa fa-recycle"></i> Pretvorba energije <span class="caret"></span></a>
+            <ul class="dropdown-menu" role="menu">
+              <li>
+              	<a href="#heat" data-toggle="tab">
+            			<span class="fa-stack">
+									  <i class="fa fa-square-o fa-stack-2x"></i>
+									  <i class="fa fa-fire fa-stack-1x"></i>
+									</span>
+									<span style="padding-left: 5px;">
+										Toplinska energija
+									</span>																				
+								</a>
+							</li>
+              <li>
+              	<a href="#electricity" data-toggle="tab">
+            	    <span class="fa-stack">
+									  <i class="fa fa-square-o fa-stack-2x"></i>
+									  <i class="fa fa-bolt fa-stack-1x"></i>
+									</span>
+									<span style="padding-left: 5px;">
+										Električna energija
+									</span>
+								</a>
+							</li>
+							<li>
+								<a href="#chp" data-toggle="tab">
+            	    <span class="fa-stack">
+									  <i class="fa fa-square-o fa-stack-2x"></i>
+									  <i class="fa fa-random fa-stack-1x"></i>
+									</span>
+									<span style="padding-left: 5px;">
+										CHP (kogeneracija)
+									</span>
+								</a>
+							</li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+      <div class="panel-body">
+        <div class="tab-content">
+          <div class="tab-pane fade in active" id="total">
+          	<p>
+          		Ukupni energetski potencijal izračunat je na osnovi literaturnih podataka o količinama raspoložive biomase, 
+          		ukupnih površina i prinosa. Formule izračuna izvedene su u priloženom diplomskom radu
+							(<%= link_to '<i class="fa fa-file-pdf-o"></i> PDF'.html_safe, asset_path("diplomski_rad.pdf"), :target => "_blank", :class => "links" %>).
+          	</p>
+          	<table class="table table-bordered">
+          		<tbody>
+								<tr class="active small">
+									<td>Mega joule</td>
+									<td>Tera joule</td>
+									<td>Peta joule</td>
+								</tr>
+								<tr class="small">
+									<td><span id="resultMJ"></span> <span class="label label-primary">MJ</span></td>
+									<td><span id="resultTJ"></span> <span class="label label-primary">TJ</span></td>
+									<td><span id="resultPJ"></span> <span class="label label-primary">PJ</span></td>
+								</tr>
+          		</tbody>
+          	</table>
+          </div>
+
+          <div class="tab-pane fade" id="heat">
+          	<p>
+          		Prema literaturnim podacima energetska iskoristivost biomase u sustavima proizvodnje toplinske energije iznosi 75-80%.
+          		Prikazani podaci dobiveni su pod pretpostavkom energetske iskoristivosti od <b>80%</b>.
+          	</p>
+          	<table class="table table-bordered">
+          		<tbody>
+								<tr class="active small">
+									<td>Mega joule</td>
+									<td>Tera joule</td>
+									<td>Peta joule</td>
+								</tr>
+								<tr class="small">
+									<td><span id="resultHeatMJ"></span> <span class="label label-primary">MJ</span></td>
+									<td><span id="resultHeatTJ"></span> <span class="label label-primary">TJ</span></td>
+									<td><span id="resultHeatPJ"></span> <span class="label label-primary">PJ</span></td>
+								</tr>
+          		</tbody>
+          	</table>          	
+          </div>
+
+          <div class="tab-pane fade" id="electricity">
+          	<p>
+          		Prema literaturnim podacima energetska iskoristivost biomase u sustavima proizvodnje električne energije iznosi 20-25%.
+          		Prikazani podaci dobiveni su pod pretpostavkom energetske iskoristivosti od <b>25%</b>.
+          	</p>
+          	<table class="table table-bordered">
+          		<tbody>
+								<tr class="active small">
+									<td>Kilovatsat</td>
+									<td>Megavatsat</td>
+									<td>Gigavatsat</td>
+								</tr>
+								<tr class="small">
+									<td><span id="resultElectricityKWh"></span> <span class="label label-primary">kWh</span></td>
+									<td><span id="resultElectricityMWh"></span> <span class="label label-primary">MWh</span></td>
+									<td><span id="resultElectricityGWh"></span> <span class="label label-primary">GWh</span></td>
+								</tr>
+          		</tbody>
+          	</table>
+          	<p class="text-muted small">
+          		<i class="fa fa-home"></i> Preračunata količina električne energije dovoljna je za godišnju opskrbu <b><span id="noHouseholdElectricity"></span></b> prosječnih kućanstava u RH.
+          	<p/>
+          	<p class="text-muted small">	
+          		<i class="fa fa-money"></i> Prosječna kupovna cijena preračunate količine električne energije iznosi <b><span id="priceElectricity1"></span> kn</b>. Prodajna cijena iznosi <b><span id="priceElectricity2"></span> kn</b>.
+          	</p>
+          </div>
+
+          <div class="tab-pane fade" id="chp">
+          	<p>
+          		Prema literaturnim podacima energetska iskoristivost biomase u sustavima istovremene proizvodnje toplinske i električne energije (kogeneracija) iznosi 75-80%. U kogeneracijskim sustavima omjer proizvedene količine toplinske energije naspram električne energije iznosi 10:3. Prikazani podaci izračunati su uzimajući u obzir proizvodni omjer <b>10:3</b> i energetsku iskoristivost od <b>80%</b>.
+          	</p>	
+          	<table class="table table-bordered">
+          		<tbody>
+          			<tr class="info">
+          				<th colspan="3">
+          					Toplinska energija (~ 77%)
+          				</th>
+          			</tr>
+								<tr class="active small">
+									<td>Mega joule</td>
+									<td>Tera joule</td>
+									<td>Peta joule</td>
+								</tr>
+								<tr class="small">
+									<td><span id="resultCHPMJ"></span> <span class="label label-primary">MJ</span></td>
+									<td><span id="resultCHPTJ"></span> <span class="label label-primary">TJ</span></td>
+									<td><span id="resultCHPPJ"></span> <span class="label label-primary">PJ</span></td>
+								</tr>
+								<tr class="info">
+          				<th colspan="3">
+          					Električna energija (~ 23%)
+          				</th>
+          			</tr>
+								<tr class="active small">
+									<td>Kilovatsat</td>
+									<td>Megavatsat</td>
+									<td>Gigavatsat</td>
+								</tr>
+								<tr class="small">
+									<td><span id="resultCHPkWh"></span> <span class="label label-primary">kWh</span></td>
+									<td><span id="resultCHPMWh"></span> <span class="label label-primary">MWh</span></td>
+									<td><span id="resultCHPGWh"></span> <span class="label label-primary">GWh</span></td>
+								</tr>
+          		</tbody>
+          	</table>
+          	<p class="text-muted small">
+          		<i class="fa fa-home"></i> Preračunata količina električne energije dovoljna je za godišnju opskrbu <b><span id="noHouseholdCHP"></span></b> prosječnih kućanstava u RH.
+          	<p/>
+          	<p class="text-muted small">	
+          		<i class="fa fa-money"></i> Prosječna kupovna cijena izračunate količine električne energije iznosi <b><span id="priceCHP1"></span> kn</b>. Prodajna cijena iznosi <b><span id="priceCHP2"></span> kn</b>.
+          	</p>
+          </div>
+        </div>
+      </div>
+  	</div>
+
+		<div class="col-sm-4 compare" hidden>
+			<div class="box">							
+				<div class="icon">
+					<div class="image"><i class="fa fa-money"></i></div>
+					<div class="info">
+							Prosječna kupovna cijena izračunate količine električne energije iznosi <b><span id="cijena1kWh"></span> kn</b>.
+							Prodajna cijena iznosi <b><span id="cijena2kWh"></span> kn</b>.
+					</div>
+				</div>
+			</div> 
+		</div	>
+
+		<div class="col-sm-4 compare" hidden>
+			<div class="box">							
+				<div class="icon">
+					<div class="image"><i class="fa fa-home"></i></div>
+					<div class="info">
+							Preračunata količina električne energije dovoljna je za godišnju opskrbu <b><span id="noHousehold"></span></b> prosječnih kućanstava u RH.
+					</div>
+				</div>
+			</div> 
+		</div	>
+
+		<div class="col-sm-4 compare" hidden>
+			<div class="box">							
+				<div class="icon">
+					<div class="image"><i class="fa fa-tint"></i></div>
+					<div class="info">
+							Izračunata količina energije jednaka je <b><b><span id="barrels"></span> barela ekvivalenta nafte</b>.
+					</div>
+				</div>
+			</div> 
+		</div	>
+
+	</div>
+
+
+</div>
+
+<script type="text/javascript">
+
+	$(function () {
+    $(".allownumericwithdecimal").keydown(function (event) {
+
+        if (event.shiftKey == true) {
+            event.preventDefault();
+        }
+
+        if ((event.keyCode >= 48 && event.keyCode <= 57) || (event.keyCode >= 96 && event.keyCode <= 105) || event.keyCode == 8 || event.keyCode == 9 || event.keyCode == 37 || event.keyCode == 39 || event.keyCode == 46 || event.keyCode == 190) {
+
+        } else {
+            event.preventDefault();
+        }
+        
+        if($(this).val().indexOf('.') !== -1 && event.keyCode == 190)
+            event.preventDefault();
+
+    	});
+		});
+
+		function option1clicked() {
+			$("#surface").show();
+			$("#labelPrinos").html('Prinos <span class="text-muted">[t/ha]</span>');
+			$("#prinos").val("");
+			$("#prh").val("");
+			$("#option1").prop("checked", true);
+			$("#option2").prop("checked", false);
+		}
+
+		function option2clicked() {
+			$("#surface").hide();
+			$("#labelPrinos").html('Prinos <span class="text-muted">[t]</span>');
+			$("#prinos").val("");
+			$("#prh").val("");
+			$("#option1").prop("checked", false);
+			$("#option2").prop("checked", true);
+		}
+
+	function cropChanged(selected)
+	{
+  	switch(selected) {
+    case "vlastita":
+        $('#omjer_brojnik').val("");
+        $('#omjer_nazivnik').val("");
+        $("#dov").val("");
+        $('#omjer_brojnik').prop('readonly', false);
+        $('#omjer_nazivnik').prop('readonly', false);
+        $('#dov').prop('readonly', false);
+        break;
+    case "psenica":
+        $('#omjer_brojnik').val("1");
+        $('#omjer_nazivnik').val("1");
+        $("#dov").val("14.0");
+        $('#omjer_brojnik').prop('readonly', true);
+        $('#omjer_nazivnik').prop('readonly', true);
+        $('#dov').prop('readonly', true);
+        break;
+    case "kukuruz":
+        $('#omjer_brojnik').val("1");
+        $('#omjer_nazivnik').val("1");
+        $("#dov").val("13.5");
+        $('#omjer_brojnik').prop('readonly', true);
+        $('#omjer_nazivnik').prop('readonly', true);
+        $('#dov').prop('readonly', true);
+        break;
+    case "jecam":
+        $('#omjer_brojnik').val("1");
+        $('#omjer_nazivnik').val("1");
+        $("#dov").val("14.2");
+        $('#omjer_brojnik').prop('readonly', true);
+        $('#omjer_nazivnik').prop('readonly', true);
+        $('#dov').prop('readonly', true);
+        break;
+    case "soja":
+        $('#omjer_brojnik').val("1");
+        $('#omjer_nazivnik').val("2");
+        $("#dov").val("15.7");
+        $('#omjer_brojnik').prop('readonly', true);
+        $('#omjer_nazivnik').prop('readonly', true);
+        $('#dov').prop('readonly', true);
+        break;
+    case "suncokret":
+        $('#omjer_brojnik').val("1");
+        $('#omjer_nazivnik').val("2");
+        $("#dov").val("14.5");
+        $('#omjer_brojnik').prop('readonly', true);
+        $('#omjer_nazivnik').prop('readonly', true);
+        $('#dov').prop('readonly', true);
+        break;
+    case "uljana_repica":
+        $('#omjer_brojnik').val("1");
+        $('#omjer_nazivnik').val("2");
+        $("#dov").val("17.4");
+        $('#omjer_brojnik').prop('readonly', true);
+        $('#omjer_nazivnik').prop('readonly', true);
+        $('#dov').prop('readonly', true);
+        break;
+		} 
+	};
+
+	function erase() {
+		  $('#omjer_brojnik').val("");
+		  $('#omjer_nazivnik').val("");
+      $("#dov").val("");
+      $('#udio_tlo').val("");
+      $("#prinos").val("");
+      $("#prh").val("");
+      $("#kultura").val("vlastita");
+      $('#omjer_brojnik').prop('readonly', false);
+      $('#omjer_nazivnik').prop('readonly', false);
+      $('#dov').prop('readonly', false);
+      $('#errorNotice').hide();
+      $('#resultTable').hide();
+      $('.compare').hide();
+	}
+
+</script>

@@ -1,0 +1,2 @@
+module EnergyPotentialHelper
+end
