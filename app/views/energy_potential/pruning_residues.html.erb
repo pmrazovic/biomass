@@ -64,7 +64,7 @@
 		      <button type="button" class="btn btn-default col-sm-12" onclick="erase()"><i class="fa fa-eraser"></i> Očisti</button>
 		    </div>
 		    <div class="col-sm-6">
-		      <button type="submit" class="btn btn-primary col-sm-12"><i class="fa fa-cogs"></i> Izračunaj</button>
+		      <button type="submit" class="btn btn-primary col-sm-12" onclick="showLoader()"><i class="fa fa-cogs"></i> Izračunaj</button>
 		    </div>
 		  </div>
 
@@ -73,6 +73,11 @@
 	</div>
 
 	<div class="col-lg-6">
+
+		<div class="text-center" id="loader" hidden>
+			<%= image_tag "loader.gif" %>
+		</div>
+
 		<div class="alert alert-danger" id="errorNotice" hidden>
 		  <strong>Pogreška!</strong> Sva polja su obavezna.
 		</div>
@@ -372,6 +377,11 @@
       $('#dov').prop('readonly', false);
       $('#errorNotice').hide();
       $('#resultTable').hide();
+	}
+
+	function showLoader() {
+		$('#resultTable').hide();
+		$('#loader').show();
 	}
 
 </script>
